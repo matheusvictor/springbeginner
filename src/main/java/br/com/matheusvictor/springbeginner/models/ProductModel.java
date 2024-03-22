@@ -2,7 +2,6 @@ package br.com.matheusvictor.springbeginner.models;
 
 
 import jakarta.persistence.*;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,7 +22,7 @@ public class ProductModel implements Serializable {
 
     private String name;
 
-    private String description = "Description not available.";
+    private String description;
 
     private BigDecimal price;
 }
