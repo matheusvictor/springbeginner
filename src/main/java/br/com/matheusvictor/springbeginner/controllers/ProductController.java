@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 @RestController
 public class ProductController {
 
@@ -32,9 +35,25 @@ public class ProductController {
 
     @GetMapping("/products")
     public ResponseEntity<List<ProductModel>> getAllProducts() {
+
+        List<ProductModel> products = productRepository.findAll();
+
+        if (!products.isEmpty()) {
+            for (ProductModel product : products) {
+                UUID id = product.getId();
+                // Adiciona um link para o recurso específico
+                product.add(
+                        linkTo(
+                                // Define o método que será chamado. Nesta caso, o método getProductById da classe ProductController
+                                methodOn(ProductController.class).getProductById(id)
+                        ).withSelfRel()
+                );
+            }
+        }
+
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(productRepository.findAll());
+                .body(products);
     }
 
     @GetMapping("/products/{id}")
@@ -47,6 +66,12 @@ public class ProductController {
                     .status(HttpStatus.NOT_FOUND)
                     .body("Product not found");
         }
+
+        productModelOptional.get().add(
+                linkTo(
+                        methodOn(ProductController.class).getAllProducts()
+                ).withRel("All Products")
+        );
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -85,7 +110,7 @@ public class ProductController {
                     .status(HttpStatus.NOT_FOUND)
                     .body("Product not found");
         }
-        
+
         productRepository.delete(productModelOptional.get());
 
         return ResponseEntity
