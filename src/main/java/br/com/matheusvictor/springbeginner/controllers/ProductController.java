@@ -1,8 +1,9 @@
 package br.com.matheusvictor.springbeginner.controllers;
 
 import br.com.matheusvictor.springbeginner.dtos.ProductRecordDto;
+import br.com.matheusvictor.springbeginner.exceptions.ProductExistsException;
 import br.com.matheusvictor.springbeginner.models.ProductModel;
-import br.com.matheusvictor.springbeginner.repositories.ProductRepository;
+import br.com.matheusvictor.springbeginner.services.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,35 +22,29 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class ProductController {
 
     @Autowired
-    private ProductRepository productRepository;
+    private ProductService productService;
 
     @PostMapping("/products")
-    public ResponseEntity<ProductModel> createProduct(@RequestBody @Valid ProductRecordDto productRecordDto) {
+    public ResponseEntity<?> createProduct(@RequestBody @Valid ProductRecordDto productRecordDto) {
         // A anotation @Valid valida o objeto de entrada, garantindo que os campos estão preenchidos corretamente
         var productModel = new ProductModel();
         BeanUtils.copyProperties(productRecordDto, productModel);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(productRepository.save(productModel));
+
+        try {
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(productService.createProduct(productModel));
+        } catch (ProductExistsException ex) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body("A product with the same name and description already exists.");
+        }
     }
 
     @GetMapping("/products")
     public ResponseEntity<List<ProductModel>> getAllProducts() {
 
-        List<ProductModel> products = productRepository.findAll();
-
-        if (!products.isEmpty()) {
-            for (ProductModel product : products) {
-                UUID id = product.getId();
-                // Adiciona um link para o recurso específico
-                product.add(
-                        linkTo(
-                                // Define o método que será chamado. Nesta caso, o método getProductById da classe ProductController
-                                methodOn(ProductController.class).getProductById(id)
-                        ).withSelfRel()
-                );
-            }
-        }
+        List<ProductModel> products = productService.getAllProducts();
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -59,7 +54,7 @@ public class ProductController {
     @GetMapping("/products/{id}")
     public ResponseEntity<Object> getProductById(@PathVariable(value = "id") UUID id) {
 
-        Optional<ProductModel> productModelOptional = productRepository.findById(id);
+        Optional<ProductModel> productModelOptional = productService.getProductById(id);
 
         if (productModelOptional.isEmpty()) {
             return ResponseEntity
@@ -84,7 +79,7 @@ public class ProductController {
             @RequestBody @Valid ProductRecordDto productRecordDto
     ) {
 
-        Optional<ProductModel> productModelOptional = productRepository.findById(id);
+        Optional<ProductModel> productModelOptional = productService.getProductById(id);
 
         if (productModelOptional.isEmpty()) {
             return ResponseEntity
@@ -97,13 +92,13 @@ public class ProductController {
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(productRepository.save(productModel));
+                .body(productService.createProduct(productModel));
     }
 
     @DeleteMapping("/products/{id}")
     public ResponseEntity<Object> deleteProduct(@PathVariable(value = "id") UUID id) {
 
-        Optional<ProductModel> productModelOptional = productRepository.findById(id);
+        Optional<ProductModel> productModelOptional = productService.getProductById(id);
 
         if (productModelOptional.isEmpty()) {
             return ResponseEntity
@@ -111,7 +106,7 @@ public class ProductController {
                     .body("Product not found");
         }
 
-        productRepository.delete(productModelOptional.get());
+        productService.deleteProduct(productModelOptional.get());
 
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
