@@ -1,5 +1,6 @@
 package br.com.matheusvictor.springbeginner.controllers;
 
+import br.com.matheusvictor.springbeginner.constants.ExceptionsMessages;
 import br.com.matheusvictor.springbeginner.dtos.ProductRecordDto;
 import br.com.matheusvictor.springbeginner.exceptions.ProductExistsException;
 import br.com.matheusvictor.springbeginner.models.ProductModel;
@@ -37,7 +38,7 @@ public class ProductController {
         } catch (ProductExistsException ex) {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
-                    .body("A product with the same name and description already exists.");
+                    .body(ExceptionsMessages.PRODUCT_EXISTS.getMessage());
         }
     }
 
@@ -59,7 +60,7 @@ public class ProductController {
         if (productModelOptional.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body("Product not found");
+                    .body(ExceptionsMessages.PRODUCT_NOT_FOUND.getMessage());
         }
 
         productModelOptional.get().add(
